@@ -21,13 +21,14 @@ NS_LOG_COMPONENT_DEFINE ("OFSwitch13SimpleTopo");
 void QueryAllQueLength(Ptr<OFSwitch13Device> openFlowDev) {
   //获取交换机的端口数量
   size_t portSize = openFlowDev->GetSwitchPortSize();
+  uint64_t dpid = openFlowDev->GetDpId();
   for(uint16_t i = 0; i < portSize; i++){
     Ptr<OFSwitch13Port> ofPort = openFlowDev->GetSwitchPort(i+1);
     Ptr<OFSwitch13Queue> ofQue = ofPort->GetPortQueue();
-    uint32_t queueLength = ofQue->GetNPackets();
+    uint16_t queueLength = ofQue->GetNPackets();
     NS_LOG_INFO("The Port " << i+1 << " queueLength is " << queueLength);
     //判断是否大于阈值
-
+    openFlowDev->SendQueueCongestionNotifyMessage(dpid,queueLength);
     //OFSwitch13Device构造发送函数，发送到控制器
   }
   
@@ -150,8 +151,8 @@ main (int argc, char *argv[])
       csmaHelper.EnablePcap ("host", hostDevices);
     }
 
-  // Time initialDelay = MicroSeconds(1000); // Initial delay before the first execution
-  // Simulator::Schedule(initialDelay, &QueryAllQueLength, openFlowDev);
+  Time initialDelay = MicroSeconds(1000); // Initial delay before the first execution
+  Simulator::Schedule(initialDelay, &QueryAllQueLength, openFlowDev);
   // Run the simulation
   Simulator::Stop (Seconds (simTime));
   Simulator::Run ();
