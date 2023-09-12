@@ -56,16 +56,16 @@ main (int argc, char *argv[])
   if (verbose)
     {
       OFSwitch13Helper::EnableDatapathLogs ();
-      LogComponentEnable ("OFSwitch13Interface", LOG_LEVEL_ALL);
-      LogComponentEnable ("OFSwitch13Device", LOG_LEVEL_ALL);
-      LogComponentEnable ("OFSwitch13SimpleTopo", LOG_LEVEL_ALL);
-      LogComponentEnable ("OFSwitch13Port", LOG_LEVEL_ALL);
-      LogComponentEnable ("OFSwitch13Queue", LOG_LEVEL_ALL);
-      LogComponentEnable ("OFSwitch13SocketHandler", LOG_LEVEL_ALL);
-      LogComponentEnable ("OFSwitch13Controller", LOG_LEVEL_ALL);
+      // LogComponentEnable ("OFSwitch13Interface", LOG_LEVEL_ALL);
+      // LogComponentEnable ("OFSwitch13Device", LOG_LEVEL_ALL);
+      // LogComponentEnable ("OFSwitch13SimpleTopo", LOG_LEVEL_ALL);
+      // LogComponentEnable ("OFSwitch13Port", LOG_LEVEL_ALL);
+      // LogComponentEnable ("OFSwitch13Queue", LOG_LEVEL_ALL);
+      // LogComponentEnable ("OFSwitch13SocketHandler", LOG_LEVEL_ALL);
+      // LogComponentEnable ("OFSwitch13Controller", LOG_LEVEL_ALL);
       LogComponentEnable ("OFSwitch13LearningController", LOG_LEVEL_ALL);
-      LogComponentEnable ("OFSwitch13Helper", LOG_LEVEL_ALL);
-      LogComponentEnable ("OFSwitch13InternalHelper", LOG_LEVEL_ALL);
+      // LogComponentEnable ("OFSwitch13Helper", LOG_LEVEL_ALL);
+      // LogComponentEnable ("OFSwitch13InternalHelper", LOG_LEVEL_ALL);
     }
 
   // Enable checksum computations (required by OFSwitch13 module)
@@ -151,8 +151,8 @@ main (int argc, char *argv[])
       csmaHelper.EnablePcap ("host", hostDevices);
     }
 
-  Time initialDelay = MicroSeconds(1000); // Initial delay before the first execution
-  Simulator::Schedule(initialDelay, &QueryAllQueLength, openFlowDev);
+  // Time initialDelay = MicroSeconds(1000); // Initial delay before the first execution
+  // Simulator::Schedule(initialDelay, &QueryAllQueLength, openFlowDev);
   // Run the simulation
   Simulator::Stop (Seconds (simTime));
   Simulator::Run ();
