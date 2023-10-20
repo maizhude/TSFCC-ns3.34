@@ -4835,11 +4835,11 @@ def register_Ns3CsmaChannel_methods(root_module, cls):
     ## csma-channel.h (module 'csma'): bool ns3::CsmaChannel::TransmitEnd() [member function]
     cls.add_method('TransmitEnd', 
                    'bool', 
-                   [])
+                   [param('uint32_t', 'srcId')])
     ## csma-channel.h (module 'csma'): void ns3::CsmaChannel::PropagationCompleteEvent() [member function]
     cls.add_method('PropagationCompleteEvent', 
                    'void', 
-                   [])
+                   [param('uint32_t', 'deviceId')])
     ## csma-channel.h (module 'csma'): int32_t ns3::CsmaChannel::GetDeviceNum(ns3::Ptr<ns3::CsmaNetDevice> device) [member function]
     cls.add_method('GetDeviceNum', 
                    'int32_t', 
@@ -4847,11 +4847,11 @@ def register_Ns3CsmaChannel_methods(root_module, cls):
     ## csma-channel.h (module 'csma'): ns3::WireState ns3::CsmaChannel::GetState() [member function]
     cls.add_method('GetState', 
                    'ns3::WireState', 
-                   [])
+                   [param('uint32_t', 'deviceId')])
     ## csma-channel.h (module 'csma'): bool ns3::CsmaChannel::IsBusy() [member function]
     cls.add_method('IsBusy', 
                    'bool', 
-                   [])
+                   [param('uint32_t', 'deviceId')])
     ## csma-channel.h (module 'csma'): bool ns3::CsmaChannel::IsActive(uint32_t deviceId) [member function]
     cls.add_method('IsActive', 
                    'bool', 

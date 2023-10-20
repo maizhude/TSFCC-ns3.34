@@ -49,6 +49,8 @@ cmake-build-relwithdebinfo/
 cmake-build-minsizerel/
 cmake-build-release/
 vcpkg/
+incast/
+pcap/
 
 .vs/
 

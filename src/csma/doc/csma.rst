@@ -14,6 +14,12 @@ The |ns3| CSMA device models a simple bus network in the spirit of Ethernet.
 Although it does not model any real physical network you could ever build or
 buy, it does provide some very useful functionality.
 
+When Ethernet was standardised, all communication was half-duplex. Half-duplex
+communication restricts a node to either transmit or receive at a time but not
+perform both actions concurrently. By default, the |ns3| CSMA device models a
+half-duplex bus network, with no fixed limit on the number of devices connected
+to the shared transmission medium. 
+
 Typically when one thinks of a bus network Ethernet or IEEE 802.3 comes to mind.
 Ethernet uses CSMA/CD (Carrier Sense Multiple Access with Collision Detection
 with exponentially increasing backoff to contend for the shared transmission
@@ -22,6 +28,12 @@ nature of the globally available channel to provide instantaneous (faster than
 light) carrier sense and priority-based collision "avoidance." Collisions in the
 sense of Ethernet never happen and so the |ns3| CSMA device does not model
 collision detection, nor will any transmission in progress be "jammed."
+
+This model also offers support for full-duplex communication, where the
+transmission medium can operate in both directions simultaneously but is
+restricted to a maximum of two devices connected on the single full-duplex
+link.  When in full-duplex operation, the original CSMA/CD protocol is shut off
+and the two devices on the link can send data independently
 
 CSMA Layer Model
 ++++++++++++++++
@@ -83,8 +95,7 @@ the protocol stack.
 CSMA Channel Model
 ******************
 
-The class CsmaChannel models the actual transmission medium. There is no fixed
-limit for the number of devices connected to the channel. The CsmaChannel models
+The class CsmaChannel models the actual transmission medium. The CsmaChannel models
 a data rate and a speed-of-light delay which can be accessed via the attributes
 "DataRate" and "Delay" respectively. The data rate provided to the channel is
 used to set the data rates used by the transmitter sections of the CSMA devices
@@ -93,6 +104,18 @@ devices. Since the data rate is only used to calculate a delay time, there is no
 limitation (other than by the data type holding the value) on the speed at which
 CSMA channels and devices can operate; and no restriction based on any kind of
 PHY characteristics.
+
+The CsmaChannel can operate in half-duplex or in full-duplex mode, which can be
+defined via the attribute "FullDuplex". The CsmaChannel holds two internal
+subchannels. When operating in half-duplex mode, only the first subchannel is
+used by all devices for both transmission and reception procedures. In this
+case, the CsmaChannel models a broadcast medium so the packet is delivered to
+all of the devices on the channel (including the source) at the end of the
+propagation time. It is the responsibility of the sending device to determine
+whether or not it receives a packet broadcast over the channel. When the
+CsmaChannel is operating in full-duplex mode (with a maximum of two devices
+attached to the channel), each device uses its exclusive subchannel for
+unidirectional packet transmission, getting rid of the CSMA/CD mechanism.
 
 The CsmaChannel has three states, ``IDLE``, ``TRANSMITTING`` and
 ``PROPAGATING``. These three states are "seen" instantaneously by all devices on
@@ -133,16 +156,13 @@ through its cable to the hub; plus 2) the time it takes for the hub to forward
 the packet out a port; plus 3) the time it takes for the signal in question to
 propagate to the destination net device.
 
-The CsmaChannel models a broadcast medium so the packet is delivered to all of
-the devices on the channel (including the source) at the end of the propagation
-time. It is the responsibility of the sending device to determine whether or not
-it receives a packet broadcast over the channel.
+
 
 The CsmaChannel provides following Attributes:
 
 * DataRate:  The bitrate for packet transmission on connected devices;
-* Delay: The speed of light transmission delay for the channel.
-
+* Delay: The speed of light transmission delay for the channel;
+* FullDuplex: Whether the channel is operating in full-duplex mode or not.
 CSMA Net Device Model
 *********************
 
@@ -195,7 +215,9 @@ The CsmaNetDevice implements a random exponential backoff algorithm that is
 executed if the channel is determined to be busy (``TRANSMITTING`` or
 ``PPROPAGATING``) when the device wants to start propagating. This results in a
 random delay of up to pow (2, retries) - 1 microseconds before a retry is
-attempted. The default maximum number of retries is 1000.
+attempted. The default maximum number of retries is 1000. Note that the random
+exponential backoff algorithm is not used when the device is attached to a
+channel in full-duplex operation.
 
 Using the CsmaNetDevice
 ***********************
@@ -349,16 +371,19 @@ net device.
 Summary
 *******
 
-The ns3 CSMA model is a simplistic model of an Ethernet-like network.  It
-supports a Carrier-Sense function and allows for Multiple Access to a
-shared medium.  It is not physical in the sense that the state of the
-medium is instantaneously shared among all devices.  This means that there
-is no collision detection required in this model and none is implemented.
-There will never be a "jam" of a packet already on the medium.  Access to
-the shared channel is on a first-come first-served basis as determined by
-the simulator scheduler.  If the channel is determined to be busy by looking
-at the global state, a random exponential backoff is performed and a retry
-is attempted.
+The ns3 CSMA model is a simplistic model of an Ethernet-like network that can
+operate in half-duplex or in full-duplex modes. In half-duplex mode, it
+supports a Carrier-Sense function and allows for Multiple Access to a shared
+medium. It is not physical in the sense that the state of the medium is
+instantaneously shared among all devices. This means that there is no collision
+detection required in this model and none is implemented. There will never be a
+"jam" of a packet already on the medium. Access to the shared channel is on a
+first-come first-served basis as determined by the simulator scheduler. If the
+channel is determined to be busy by looking at the global state, a random
+exponential backoff is performed and a retry is attempted. When operating in
+full-duplex mode, restricted to a maximum of two devices on the channel, the
+transmission medium can operate in both directions simultaneously and there is
+no need of the original CSMA/CD protocol.
 
 Ns-3 Attributes provide a mechanism for setting various parameters in the
 device and channel such as addresses, encapsulation modes and error model

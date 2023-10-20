@@ -14,6 +14,7 @@ cpp_examples = [
     ("csma-packet-socket", "True", "True"),
     ("csma-ping", "True", "True"),
     ("csma-raw-ip-socket", "True", "True"),
+    ("csma-duplex", "True", "True"),
 ]
 
 # A list of Python examples to run in order to ensure that they remain

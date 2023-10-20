@@ -1,6 +1,9 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2007 Emmanuelle Laprise
+ * Copyright (c) 2012 Jeff Young
+ * Copyright (c) 2014 Murphy McCauley
+ * Copyright (c) 2017 Luciano Jerez Chaves
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +19,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author: Emmanuelle Laprise <emmanuelle.laprise@bluekazoo.ca>
+ * Author: Jeff Young <jyoung9@gatech.edu>
+ * Author: Murphy McCauley <murphy.mccauley@gmail.com>
+ * Author: Luciano Jerez Chaves <luciano@lrc.ic.unicamp.br>
  */
 
 #include "ns3/log.h"
@@ -449,6 +455,7 @@ CsmaNetDevice::TransmitStart (void)
 
   NS_LOG_LOGIC ("m_currentPkt = " << m_currentPkt);
   NS_LOG_LOGIC ("UID = " << m_currentPkt->GetUid ());
+  NS_LOG_LOGIC ("Device ID = " << m_deviceId);
 
   //
   // Only transmit if the send side of net device is enabled
@@ -470,35 +477,36 @@ CsmaNetDevice::TransmitStart (void)
                  "Must be READY to transmit. Tx state is: " << m_txMachineState);
 
   //
-  // Now we have to sense the state of the medium and either start transmitting
-  // if it is idle, or backoff our transmission if someone else is on the wire.
+  // Now we sense the state of the medium. If idle, we start transmitting.
+  // Otherwise, we have to wait.
   //
-  if (m_channel->GetState () != IDLE)
+   if (m_channel->GetState (m_deviceId) != IDLE)
     {
       //
-      // The channel is busy -- backoff and rechedule TransmitStart() unless
-      // we have exhausted all of our retries.
+      // The (sub)channel is busy. If in half-duplex mode, backoff and
+      // reschedule TransmitStart() unless we have exhausted all of our
+      // retries. This is not supposed to happen in full-duplex mode.
       //
-      m_txMachineState = BACKOFF;
-
-      if (m_backoff.MaxRetriesReached ())
-        { 
-          //
-          // Too many retries, abort transmission of packet
-          //
-          TransmitAbort ();
-        } 
-      else 
+      if (m_channel->IsFullDuplex () == false)
+      {
+        m_txMachineState = BACKOFF;
+        if (m_backoff.MaxRetriesReached ())
         {
+          // Too many retries, abort transmission of packet
+          TransmitAbort ();
+        }
+        else
+        {
+          //
+          // Backoff and reschedule transmission.
+          //
           m_macTxBackoffTrace (m_currentPkt);
-
           m_backoff.IncrNumRetries ();
           Time backoffTime = m_backoff.GetBackoffTime ();
-
-          NS_LOG_LOGIC ("Channel busy, backing off for " << backoffTime.As (Time::S));
-
+          NS_LOG_LOGIC ("Channel busy, backing off for " << backoffTime.GetSeconds () << " sec");
           Simulator::Schedule (backoffTime, &CsmaNetDevice::TransmitStart, this);
         }
+      }
     } 
   else 
     {
@@ -586,7 +594,7 @@ CsmaNetDevice::TransmitCompleteEvent (void)
   // the transmitter after the interframe gap.
   //
   NS_ASSERT_MSG (m_txMachineState == BUSY, "CsmaNetDevice::transmitCompleteEvent(): Must be BUSY if transmitting");
-  NS_ASSERT (m_channel->GetState () == TRANSMITTING);
+  NS_ASSERT (m_channel->GetState (m_deviceId) == TRANSMITTING);
   m_txMachineState = GAP;
 
   //
@@ -596,8 +604,9 @@ CsmaNetDevice::TransmitCompleteEvent (void)
   NS_ASSERT_MSG (m_currentPkt != 0, "CsmaNetDevice::TransmitCompleteEvent(): m_currentPkt zero");
   NS_LOG_LOGIC ("m_currentPkt=" << m_currentPkt);
   NS_LOG_LOGIC ("Pkt UID is " << m_currentPkt->GetUid () << ")");
+  NS_LOG_LOGIC ("Device ID is " << m_deviceId);
 
-  m_channel->TransmitEnd (); 
+  m_channel->TransmitEnd (m_deviceId); 
   m_phyTxEndTrace (m_currentPkt);
   m_currentPkt = 0;
 
@@ -651,6 +660,7 @@ CsmaNetDevice::Attach (Ptr<CsmaChannel> ch)
   m_channel = ch;
 
   m_deviceId = m_channel->Attach (this);
+  NS_LOG_FUNCTION ("Device ID is " << m_deviceId);
 
   //
   // The channel provides us with the transmitter data rate.
@@ -688,6 +698,7 @@ CsmaNetDevice::Receive (Ptr<Packet> packet, Ptr<CsmaNetDevice> senderDevice)
 {
   NS_LOG_FUNCTION (packet << senderDevice);
   NS_LOG_LOGIC ("UID is " << packet->GetUid ());
+  NS_LOG_LOGIC ("Device ID is " << m_deviceId);
 
   //
   // We never forward up packets that we sent.  Real devices don't do this since
@@ -973,6 +984,7 @@ CsmaNetDevice::SendFrom (Ptr<Packet> packet, const Address& src, const Address& 
   NS_LOG_FUNCTION (packet << src << dest << protocolNumber);
   NS_LOG_LOGIC ("packet =" << packet);
   NS_LOG_LOGIC ("UID is " << packet->GetUid () << ")");
+  NS_LOG_LOGIC ("Device ID is " << m_deviceId);
 
   NS_ASSERT (IsLinkUp ());
 

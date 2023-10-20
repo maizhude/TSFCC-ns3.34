@@ -18,3 +18,6 @@ def build(bld):
 
     obj = bld.create_ns3_program('csma-ping', ['csma', 'internet', 'applications', 'internet-apps'])
     obj.source = 'csma-ping.cc'
+    
+    obj = bld.create_ns3_program('csma-duplex', ['csma', 'internet', 'applications'])
+    obj.source = 'csma-duplex.cc'
