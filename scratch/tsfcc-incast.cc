@@ -19,7 +19,7 @@
 
 using namespace ns3;
 NS_LOG_COMPONENT_DEFINE ("OFSwitch13SimpleTopo");
-
+class OFSwitch13LearningControllers;
 //定时查询某个交换机的所有端口的所有队列长度
 void QueryAllQueLength(Ptr<OFSwitch13Device> openFlowDev) {
   //获取交换机的端口数量
@@ -92,6 +92,7 @@ main (int argc, char *argv[])
   CsmaHelper csmaHelper;
   csmaHelper.SetChannelAttribute ("DataRate", DataRateValue (DataRate ("1000Mbps")));
   csmaHelper.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (2)));
+  csmaHelper.SetChannelAttribute("FullDuplex", BooleanValue(true));
 
   NetDeviceContainer hostDevices;
   NetDeviceContainer switchPorts;
@@ -108,7 +109,8 @@ main (int argc, char *argv[])
 
   // 利用OFSwitch13InternalHelper配置openflow，安装上控制器和交换机，然后创建openflow信道
   Ptr<OFSwitch13InternalHelper> of13Helper = CreateObject<OFSwitch13InternalHelper> ();
-  of13Helper->InstallController (controllerNode);
+  Ptr<OFSwitch13Controller> controller = CreateObject<OFSwitch13LearningController> ();
+  of13Helper->InstallController (controllerNode, controller);
   Ptr<OFSwitch13Device> openFlowDev = of13Helper->InstallSwitch (switchNode, switchPorts);
   of13Helper->CreateOpenFlowChannels ();
 
@@ -128,7 +130,16 @@ main (int argc, char *argv[])
   // pingHelper.SetAttribute ("Verbose", BooleanValue (true));
   // ApplicationContainer pingApps = pingHelper.Install (hosts.Get (0));
   // pingApps.Start (Seconds (1));
+  for (uint32_t i = 0; i < hosts.GetN(); ++i) {
+    V4PingHelper pingHelper(hostIpIfaces.GetAddress(5)); // 使用服务器的IP地址
+    pingHelper.SetAttribute("Verbose", BooleanValue(false));
 
+    ApplicationContainer singleHostPingApps = pingHelper.Install(hosts.Get(i));
+    singleHostPingApps.Start(Seconds(0.3));
+
+    // 将Ping应用程序添加到总的Ping应用程序容器
+    // pingApps.Add(singleHostPingApps);
+  }
   // 在两主机之间利用OnOffHelper开启tcp连接
   uint16_t port = 5000;
   

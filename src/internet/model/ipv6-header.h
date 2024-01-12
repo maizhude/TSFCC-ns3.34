@@ -232,18 +232,24 @@ public:
    * \brief Get the "Source address" field.
    * \return the source address
    */
+  Ipv6Address GetSource (void) const;
+
   Ipv6Address GetSourceAddress (void) const;
 
   /**
    * \brief Set the "Destination address" field.
    * \param dst the destination address
    */
+  void SetDestination (Ipv6Address dst);
+
   void SetDestinationAddress (Ipv6Address dst);
 
   /**
    * \brief Get the "Destination address" field.
    * \return the destination address
    */
+  Ipv6Address GetDestination (void) const;
+  
   Ipv6Address GetDestinationAddress (void) const;
 
   /**

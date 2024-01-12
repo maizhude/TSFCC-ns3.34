@@ -97,20 +97,39 @@ void Ipv6Header::SetSourceAddress (Ipv6Address src)
   m_sourceAddress = src;
 }
 
-Ipv6Address Ipv6Header::GetSourceAddress () const
+Ipv6Address Ipv6Header::GetSource () const
 {
   return m_sourceAddress;
 }
 
-void Ipv6Header::SetDestinationAddress (Ipv6Address dst)
+Ipv6Address Ipv6Header::GetSourceAddress () const
+{
+  return GetSource ();
+}
+
+
+void Ipv6Header::SetDestination (Ipv6Address dst)
 {
   m_destinationAddress = dst;
 }
 
-Ipv6Address Ipv6Header::GetDestinationAddress () const
+void Ipv6Header::SetDestinationAddress (Ipv6Address dst)
+{
+  SetDestination (dst);
+}
+
+
+
+Ipv6Address Ipv6Header::GetDestination () const
 {
   return m_destinationAddress;
 }
+
+Ipv6Address Ipv6Header::GetDestinationAddress () const
+{
+  return GetDestination ();
+}
+
 
 TypeId Ipv6Header::GetTypeId (void)
 {

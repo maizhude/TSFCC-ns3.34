@@ -1184,8 +1184,8 @@ TcpSocketBase::ForwardUp6 (Ptr<Packet> packet, Ipv6Header header, uint16_t port,
                 " to " << m_endPoint6->GetLocalAddress () <<
                 ":" << m_endPoint6->GetLocalPort ());
 
-  Address fromAddress = Inet6SocketAddress (header.GetSourceAddress (), port);
-  Address toAddress = Inet6SocketAddress (header.GetDestinationAddress (),
+  Address fromAddress = Inet6SocketAddress (header.GetSource (), port);
+  Address toAddress = Inet6SocketAddress (header.GetDestination (),
                                           m_endPoint6->GetLocalPort ());
 
   TcpHeader tcpHeader;
@@ -2865,7 +2865,7 @@ TcpSocketBase::SetupEndpoint6 ()
   // Create a dummy packet, then ask the routing function for the best output
   // interface's address
   Ipv6Header header;
-  header.SetDestinationAddress (m_endPoint6->GetPeerAddress ());
+  header.SetDestination (m_endPoint6->GetPeerAddress ());
   Socket::SocketErrno errno_;
   Ptr<Ipv6Route> route;
   Ptr<NetDevice> oif = m_boundnetdevice;
@@ -2961,28 +2961,25 @@ TcpSocketBase::AddSocketTags (const Ptr<Packet> &p) const
    * if both options are set. Once the packet got to layer three, only
    * the corresponding tags will be read.
    */
-  if (GetIpTos ())
-    {
+  if (GetIpTos ()) {
       SocketIpTosTag ipTosTag;
-      if (m_tcb->m_ecnState != TcpSocketState::ECN_DISABLED && !CheckNoEcn (GetIpTos ()))
-        {
+      if (m_tcb->m_ecnState != TcpSocketState::ECN_DISABLED && !CheckNoEcn (GetIpTos ())) {
           ipTosTag.SetTos (MarkEcnCodePoint (GetIpTos (), m_tcb->m_ectCodePoint));
-        }
-      else
-        {
+        } else {
           // Set the last received ipTos
           ipTosTag.SetTos (GetIpTos ());
         }
       p->AddPacketTag (ipTosTag);
-    }
-  else
-    {
-      if ((m_tcb->m_ecnState != TcpSocketState::ECN_DISABLED && p->GetSize () > 0) || m_tcb->m_ecnMode == TcpSocketState::DctcpEcn)
-        {
+    } else {
+      if (((m_tcb->m_ecnState != TcpSocketState::ECN_DISABLED && p->GetSize () > 0) || m_tcb->m_ecnMode == TcpSocketState::DctcpEcn) && m_tcb->m_ecnMode != TcpSocketState::SwiftEcn) {
           SocketIpTosTag ipTosTag;
           ipTosTag.SetTos (MarkEcnCodePoint (GetIpTos (), m_tcb->m_ectCodePoint));
           p->AddPacketTag (ipTosTag);
-        }
+      } else if ((m_tcb->m_ecnState != TcpSocketState::ECN_DISABLED && p->GetSize () > 0) || m_tcb->m_ecnMode == TcpSocketState::SwiftEcn) {
+          SocketIpTosTag ipTosTag;
+          ipTosTag.SetTos (MarkEcnCodePoint (GetIpTos (), m_tcb->m_ectCodePoint));
+          p->AddPacketTag (ipTosTag);
+      }
     }
 
   if (IsManualIpv6Tclass ())
@@ -3001,12 +2998,15 @@ TcpSocketBase::AddSocketTags (const Ptr<Packet> &p) const
     }
   else
     {
-      if ((m_tcb->m_ecnState != TcpSocketState::ECN_DISABLED && p->GetSize () > 0) || m_tcb->m_ecnMode == TcpSocketState::DctcpEcn)
-        {
+      if (((m_tcb->m_ecnState != TcpSocketState::ECN_DISABLED && p->GetSize () > 0) || m_tcb->m_ecnMode == TcpSocketState::DctcpEcn) && m_tcb->m_ecnMode!= TcpSocketState::SwiftEcn) {
           SocketIpv6TclassTag ipTclassTag;
           ipTclassTag.SetTclass (MarkEcnCodePoint (GetIpv6Tclass (), m_tcb->m_ectCodePoint));
           p->AddPacketTag (ipTclassTag);
-        }
+      }else if ((m_tcb->m_ecnState != TcpSocketState::ECN_DISABLED && p->GetSize () > 0) || m_tcb->m_ecnMode == TcpSocketState::SwiftEcn) {
+          SocketIpv6TclassTag ipTclassTag;
+          ipTclassTag.SetTclass (MarkEcnCodePoint (GetIpv6Tclass (), m_tcb->m_ectCodePoint));
+          p->AddPacketTag (ipTclassTag);
+      }
     }
 
   if (IsManualIpTtl ())
@@ -3379,6 +3379,9 @@ TcpSocketBase::BytesInFlight () const
 uint32_t
 TcpSocketBase::Window (void) const
 {
+  // if( m_rWnd.Get () == std::min (m_rWnd.Get (), m_tcb->m_cWnd.Get ())){
+  //   m_tcb->m_cWnd = m_rWnd.Get ();
+  // }
   return std::min (m_rWnd.Get (), m_tcb->m_cWnd.Get ());
 }
 

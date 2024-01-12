@@ -1022,7 +1022,7 @@ TcpTxBuffer::NextSeg (SequenceNumber32 *seq, SequenceNumber32 *seqHigh, bool isR
    */
   if (SizeFromSequence (m_firstByteSeq + m_sentSize) > 0)
     {
-      if (m_sentSize <= m_rWndCallback ())
+      if (m_sentSize < m_rWndCallback ())
         {
           NS_LOG_INFO ("There is unsent data. Send it");
           *seq = m_firstByteSeq + m_sentSize;
