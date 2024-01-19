@@ -486,9 +486,9 @@ int main (int argc, char *argv[])
   std::string dir;
   std::string pcap_dir;
   if(is_sdn == true){
-    dir = "new-yaling/openflow/"+std::to_string(sendNum)+ "/" +std::to_string(flow_size)+ "KB/" + transport_port.substr(0, transport_port.length()) + "/" + currentTime + "/";
+    dir = "yaling/openflow/"+std::to_string(sendNum)+ "/" +std::to_string(flow_size)+ "KB/" + transport_port.substr(0, transport_port.length()) + "/" + currentTime + "/";
     std::cout << "Data directory:" << dir << std::endl;
-    pcap_dir = "new-yaling-pcap/openflow/"+std::to_string(sendNum)+ "/" +std::to_string(flow_size)+ "KB/" + transport_port.substr(0, transport_port.length()) + "/" + currentTime + "/";
+    pcap_dir = "yaling-pcap/openflow/"+std::to_string(sendNum)+ "/" +std::to_string(flow_size)+ "KB/" + transport_port.substr(0, transport_port.length()) + "/" + currentTime + "/";
     std::cout << "Pcap directory:" << pcap_dir << std::endl;
   }else{
     dir = "yaling/"+std::to_string(sendNum)+ "/" +std::to_string(flow_size)+ "KB/" + transport_port.substr(0, transport_port.length()) + "/" + currentTime + "/";
@@ -522,8 +522,8 @@ int main (int argc, char *argv[])
       Ptr<QueueDisc> queue = queueDiscs.Get(0);
       Simulator::ScheduleNow (&CheckQueueSize, queue, filePlotQueue.str());
     }
-    csmaHelper.EnablePcap (pcap_dir+"/mouReceive", mouReceDevices);
-    csmaHelper.EnablePcap (pcap_dir+"/eleReceive", eleReceDevices);
+    // csmaHelper.EnablePcap (pcap_dir+"/mouReceive", mouReceDevices);
+    // csmaHelper.EnablePcap (pcap_dir+"/eleReceive", eleReceDevices);
     csmaHelper.EnablePcap (pcap_dir+"/csmaHost", hostDevices);
     // Get throughput1
     filePlotThroughput1  <<  dir << "/"  << "throughput1.dat";
