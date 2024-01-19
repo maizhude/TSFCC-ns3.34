@@ -51,7 +51,7 @@ cmake-build-release/
 vcpkg/
 incast/
 pcap/
-
+yaling*
 .vs/
 
 # Ignore local cache used by e.g. clangd
