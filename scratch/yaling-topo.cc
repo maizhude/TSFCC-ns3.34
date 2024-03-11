@@ -39,7 +39,6 @@ static Ptr<OutputStreamWrapper> rttStream;
 static Ptr<OutputStreamWrapper> cWndStream;
 static Ptr<OutputStreamWrapper> rWndStream;
 static double interval = 0.002;
-uint64_t flowRecvBytes = 0;
 std::ofstream tThtoughPut;
 uint64_t flowRecvBytes1 = 0;
 uint64_t flowRecvBytes2 = 0;
@@ -70,7 +69,7 @@ TraceRtt (std::string rtt_tr_file_name)
 {
   AsciiTraceHelper ascii;
   rttStream = ascii.CreateFileStream (rtt_tr_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/2/$ns3::TcpL4Protocol/SocketList/0/RTT", MakeCallback (&RttTracer));
+  Config::ConnectWithoutContext ("/NodeList/3/$ns3::TcpL4Protocol/SocketList/0/RTT", MakeCallback (&RttTracer));
 }
 
 static void
@@ -78,7 +77,7 @@ TraceCwnd (std::string cwnd_tr_file_name)
 {
   AsciiTraceHelper ascii;
   cWndStream = ascii.CreateFileStream (cwnd_tr_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/2/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&CwndTracer));
+  Config::ConnectWithoutContext ("/NodeList/3/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&CwndTracer));
 }
 
 static void
@@ -86,7 +85,7 @@ TraceRwnd (std::string rwnd_tr_file_name)
 {
   AsciiTraceHelper ascii;
   rWndStream = ascii.CreateFileStream (rwnd_tr_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/2/$ns3::TcpL4Protocol/SocketList/0/RWND", MakeCallback (&RwndTracer));
+  Config::ConnectWithoutContext ("/NodeList/3/$ns3::TcpL4Protocol/SocketList/0/RWND", MakeCallback (&RwndTracer));
 }
 
 
@@ -115,7 +114,20 @@ CheckOfQueueSize (Ptr<OFSwitch13Queue> ofQue, std::string filePlotQueue)
   fPlotQueue << Simulator::Now ().GetSeconds () << " " << qSize << std::endl;
   fPlotQueue.close ();
 }
-
+/**
+ * @brief 为发送端安装应用，用于实验流量生成
+ * 
+ * @param port 应用的TCP端口
+ * @param senders 发送方
+ * @param eleReceIpIfaces 象流IP地址
+ * @param mouReceIpIfaces 鼠流IP地址
+ * @param receiver 接收方
+ * @param start_time 开始时间
+ * @param stop_time 结束时间
+ * @param TCP_SEGMENT TCP片段大小
+ * @param data_mbytes 数据总量大小
+ * @param sendNum 发送方数量
+ */
 void InstallApplication(uint16_t port, NodeContainer senders, Ipv4InterfaceContainer eleReceIpIfaces, Ipv4InterfaceContainer mouReceIpIfaces,
                         NodeContainer receiver, double start_time, double stop_time, 
                         uint32_t TCP_SEGMENT, double data_mbytes, uint32_t sendNum){
@@ -160,7 +172,11 @@ void InstallApplication(uint16_t port, NodeContainer senders, Ipv4InterfaceConta
 }
 
 
-//定时查询某个交换机的所有端口的所有队列长度
+/**
+ * @brief 定时查询交换机队列长度
+ * 
+ * @param openFlowDev OFSwitch13Device
+ */
 void QueryAllQueLength(Ptr<OFSwitch13Device> openFlowDev) {
   //获取交换机的端口数量
   size_t portSize = openFlowDev->GetSwitchPortSize();
@@ -244,15 +260,15 @@ int main (int argc, char *argv[])
   std::string queue_limit = "100p";//94
   double K = 20;//18
 
-  std::string bandwidth = "1000Mbps";
+  std::string bandwidth = "1Gbps";
   uint64_t delay = 10;
-  std::string bottleneck_bw = "1000Mbps";
+  std::string bottleneck_bw = "1Gbps";
   uint64_t bottleneck_delay = 10;
 
   uint32_t IP_PACKET_SIZE = 1500;
   uint32_t TCP_SEGMENT = IP_PACKET_SIZE-40;
   uint32_t flow_size = 128;//KB
-  double data_mbytes = (sendNum-2)*flow_size*1024;
+  double data_mbytes;
 
   double minRto = 200;
   uint32_t initialCwnd = 2;
@@ -329,7 +345,7 @@ int main (int argc, char *argv[])
 	  queue_disc_type = "FifoQueueDisc";
 	  Config::SetDefault("ns3::FifoQueueDisc::MaxSize", QueueSizeValue (QueueSize (queue_limit)));
   }
-
+  data_mbytes = (sendNum-2)*flow_size*1024;
   /******** Create Nodes ********/
   NodeContainer switches;
   switches.Create(2);//哑铃结构
@@ -337,7 +353,8 @@ int main (int argc, char *argv[])
   senders.Create(sendNum);
   NodeContainer receiver;
   receiver.Create(2);//两个接收端，一个接收大象流，一个接收老鼠流
-  // NS_LOG_INFO ("--------" << senders.Get(0)->GetId ());
+  NS_LOG_INFO ("--------" << senders.Get(0)->GetId ());
+  NS_LOG_INFO ("--------" << senders.Get(1)->GetId ());
   NetDeviceContainer hostDevices;
   NetDeviceContainer switch1Ports;
   NetDeviceContainer switch2Ports;
@@ -431,6 +448,7 @@ int main (int argc, char *argv[])
     {
       NodeContainer pair (senders.Get(i), switches.Get(0));
       NetDeviceContainer link = csmaHelper.Install (pair);
+      hostDevices.Add (link.Get (0));
       tchRed.Install(link);
       address.NewNetwork();
       Ipv4InterfaceContainer interfaces = address.Assign(link);
