@@ -148,7 +148,8 @@ void InstallApplication(uint16_t port, NodeContainer senders, Ipv4InterfaceConta
     // 将Ping应用程序添加到总的Ping应用程序容器
     // pingApps.Add(singleHostPingApps);
   }
-   for(uint16_t i=0; i<2; i++)
+  // long flow
+   for(uint16_t i=0; i<6; i++)
   {
 	  Address clientAddress(InetSocketAddress(eleReceIpIfaces.GetAddress(0,0), port));
     BulkSendHelper sourceHelper ("ns3::TcpSocketFactory", clientAddress);
@@ -158,19 +159,26 @@ void InstallApplication(uint16_t port, NodeContainer senders, Ipv4InterfaceConta
     sourceApp.Start (Seconds (start_time));
     sourceApp.Stop(Seconds(stop_time));
   }
-  // long flow
-  for(uint16_t i=2; i<senders.GetN(); i++)
+  // short flow
+  for(uint16_t i=6; i<senders.GetN(); i++)
   {
 	  Address clientAddress(InetSocketAddress(mouReceIpIfaces.GetAddress(0,0), port));
     BulkSendHelper sourceHelper ("ns3::TcpSocketFactory", clientAddress);
     sourceHelper.SetAttribute("SendSize", UintegerValue(TCP_SEGMENT));
-    sourceHelper.SetAttribute ("MaxBytes", UintegerValue (data_mbytes/(sendNum-2)));
+    sourceHelper.SetAttribute ("MaxBytes", UintegerValue (data_mbytes/(sendNum-6)));
     ApplicationContainer sourceApp = sourceHelper.Install (senders.Get(i));
     sourceApp.Start (Seconds (start_time+1));
   }
 
 }
 
+void QuerySketch(Ptr<OFSwitch13Device> openFlowDev){
+  openFlowDev->GetSketchData();
+
+  // Reschedule the function call
+  Time delay = MilliSeconds(10); // Set the desired time interval
+  Simulator::Schedule(delay, &QuerySketch, openFlowDev);
+}
 
 /**
  * @brief 定时查询交换机队列长度
@@ -248,21 +256,22 @@ ThroughputPerSecond2(Ptr<PacketSink> sinkApps,std::string filePlotThrough)
 
 int main (int argc, char *argv[])
 {
+  auto simStart = std::chrono::high_resolution_clock::now();
   // Configure information
   std::string prefix_file_name = "YaLing-TOPO";
-  uint32_t sendNum = 12;//(1~50)
+  uint32_t sendNum = 20;//(1~50)
   std::string transport_port = "TcpCubic";// TcpDctcp  TcpCubic
   std::string queue_disc_type = "RedQueueDisc";//only for dctcp
 
   // todo
   bool is_sdn = true;// is SDN enabled?
 
-  std::string queue_limit = "100p";//94
-  double K = 20;//18
+  std::string queue_limit = "250p";//94
+  double K = 65;//18
 
-  std::string bandwidth = "1Gbps";
+  std::string bandwidth = "10Gbps";
   uint64_t delay = 10;
-  std::string bottleneck_bw = "1Gbps";
+  std::string bottleneck_bw = "10Gbps";
   uint64_t bottleneck_delay = 10;
 
   uint32_t IP_PACKET_SIZE = 1500;
@@ -276,7 +285,7 @@ int main (int argc, char *argv[])
   double start_time = 1;
   double stop_time = 2.5;
 
-  bool tracing = true;
+  bool tracing = false;
 
   // Create directory information
  time_t rawtime;
@@ -427,7 +436,7 @@ int main (int argc, char *argv[])
     openFlowDev1 = of13Helper->InstallSwitch (switches.Get(0), switch1Ports);
     openFlowDev2 = of13Helper->InstallSwitch (switches.Get(1), switch2Ports);
     of13Helper->CreateOpenFlowChannels ();
-    // OFSwitch13Helper::EnableDatapathLogs ();
+    OFSwitch13Helper::EnableDatapathLogs ();
   }else {//不采用OpenFlow，可以是TCPCubic或DCTCP等
     /******** Install Internet Stack ********/
     InternetStackHelper stack;
@@ -503,7 +512,7 @@ int main (int argc, char *argv[])
   /******** Set the message traces for the clients ********/
   std::string dir;
   std::string pcap_dir;
-  if(is_sdn == true){
+  if(is_sdn == true && tracing){
     dir = "yaling/openflow/"+std::to_string(sendNum)+ "/" +std::to_string(flow_size)+ "KB/" + transport_port.substr(0, transport_port.length()) + "/" + currentTime + "/";
     std::cout << "Data directory:" << dir << std::endl;
     pcap_dir = "yaling-pcap/openflow/"+std::to_string(sendNum)+ "/" +std::to_string(flow_size)+ "KB/" + transport_port.substr(0, transport_port.length()) + "/" + currentTime + "/";
@@ -555,12 +564,22 @@ int main (int argc, char *argv[])
   }
   /******** Enable openflow switch queue detection ********/
   if(is_sdn == true){
-    Time initialDelay = MicroSeconds(10); // Initial delay before the first execution
-    Simulator::Schedule(initialDelay, &QueryAllQueLength, openFlowDev1);
+    Time initialQueueDelay = MicroSeconds(10); // Initial delay before the first execution
+    Time initialSketchDelay = MilliSeconds(10);
+    Simulator::Schedule(initialQueueDelay, &QueryAllQueLength, openFlowDev1);
+    Simulator::Schedule(initialSketchDelay, &QuerySketch, openFlowDev1);
   }
 
   Simulator::Stop (Seconds(stop_time));
   Simulator::Run ();
   Simulator::Destroy ();
+
+  /***** Measure the actual time the simulation has taken (for reference) *****/
+  auto simStop = std::chrono::high_resolution_clock::now();
+  auto simTime =
+      std::chrono::duration_cast<std::chrono::milliseconds>(simStop - simStart);
+  double simTimeMin = (double)simTime.count() / 1e3 / 60;
+  NS_LOG_UNCOND("Time taken by simulation: " << simTimeMin << " minutes");
+
   return 0;
 }

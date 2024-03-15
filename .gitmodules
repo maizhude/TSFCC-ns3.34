@@ -1,4 +1,4 @@
 [submodule "contrib/ofswitch13"]
 	path = contrib/ofswitch13
-	url = https://github.com/maizhudeyeye/ofswitch13-custom-new-actions-and-messages.git
+	url = https://github.com/maizhude/ofswitch13-custom-new-actions-and-messages.git
 	branch = master
