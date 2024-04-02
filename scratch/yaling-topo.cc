@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <chrono>
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
@@ -149,7 +150,7 @@ void InstallApplication(uint16_t port, NodeContainer senders, Ipv4InterfaceConta
     // pingApps.Add(singleHostPingApps);
   }
   // long flow
-   for(uint16_t i=0; i<6; i++)
+   for(uint16_t i=0; i<4; i++)
   {
 	  Address clientAddress(InetSocketAddress(eleReceIpIfaces.GetAddress(0,0), port));
     BulkSendHelper sourceHelper ("ns3::TcpSocketFactory", clientAddress);
@@ -160,7 +161,7 @@ void InstallApplication(uint16_t port, NodeContainer senders, Ipv4InterfaceConta
     sourceApp.Stop(Seconds(stop_time));
   }
   // short flow
-  for(uint16_t i=6; i<senders.GetN(); i++)
+  for(uint16_t i=4; i<senders.GetN(); i++)
   {
 	  Address clientAddress(InetSocketAddress(mouReceIpIfaces.GetAddress(0,0), port));
     BulkSendHelper sourceHelper ("ns3::TcpSocketFactory", clientAddress);
@@ -197,7 +198,7 @@ void QueryAllQueLength(Ptr<OFSwitch13Device> openFlowDev) {
     uint16_t count = ofPort->GetCongestionRecoverCount();
     uint32_t port_no = i+1;
     //判断是否大于阈值
-    if(queueLength > 20){
+    if(queueLength > 60){
       // NS_LOG_INFO("The Port " << i+1 << " queueLength is " << queueLength);
       if(state == 0){
         state = 1;
@@ -285,7 +286,7 @@ int main (int argc, char *argv[])
   double start_time = 1;
   double stop_time = 2.5;
 
-  bool tracing = false;
+  bool tracing = true;
 
   // Create directory information
  time_t rawtime;
