@@ -34,13 +34,14 @@ class OFSwitch13TsfccControllers;
 std::stringstream filePlotQueue;
 std::stringstream filePlotThroughput1;
 std::stringstream filePlotThroughput2;
+std::stringstream filePlotfct;
 
 static bool firstRtt = true;
 static Ptr<OutputStreamWrapper> rttStream;
 static Ptr<OutputStreamWrapper> cWndStream;
 static Ptr<OutputStreamWrapper> rWndStream;
 static double interval = 0.002;
-std::ofstream tThtoughPut;
+
 uint64_t flowRecvBytes1 = 0;
 uint64_t flowRecvBytes2 = 0;
 
@@ -150,7 +151,7 @@ void InstallApplication(uint16_t port, NodeContainer senders, Ipv4InterfaceConta
     // pingApps.Add(singleHostPingApps);
   }
   // long flow
-   for(uint16_t i=0; i<4; i++)
+   for(uint16_t i=0; i<10; i++)
   {
 	  Address clientAddress(InetSocketAddress(eleReceIpIfaces.GetAddress(0,0), port));
     BulkSendHelper sourceHelper ("ns3::TcpSocketFactory", clientAddress);
@@ -161,14 +162,14 @@ void InstallApplication(uint16_t port, NodeContainer senders, Ipv4InterfaceConta
     sourceApp.Stop(Seconds(stop_time));
   }
   // short flow
-  for(uint16_t i=4; i<senders.GetN(); i++)
+  for(uint16_t i=10; i<senders.GetN(); i++)
   {
 	  Address clientAddress(InetSocketAddress(mouReceIpIfaces.GetAddress(0,0), port));
     BulkSendHelper sourceHelper ("ns3::TcpSocketFactory", clientAddress);
     sourceHelper.SetAttribute("SendSize", UintegerValue(TCP_SEGMENT));
     sourceHelper.SetAttribute ("MaxBytes", UintegerValue (data_mbytes/(sendNum-6)));
     ApplicationContainer sourceApp = sourceHelper.Install (senders.Get(i));
-    sourceApp.Start (Seconds (start_time+1));
+    sourceApp.Start (Seconds (start_time+0.3));
   }
 
 }
@@ -259,8 +260,8 @@ int main (int argc, char *argv[])
 {
   auto simStart = std::chrono::high_resolution_clock::now();
   // Configure information
-  std::string prefix_file_name = "YaLing-TOPO";
-  uint32_t sendNum = 20;//(1~50)
+  std::string prefix_file_name = "TSFCC-YaLing-TOPO";
+  uint32_t sendNum = 90;//(1~50)
   std::string transport_port = "TcpCubic";// TcpDctcp  TcpCubic
   std::string queue_disc_type = "RedQueueDisc";//only for dctcp
 
@@ -274,17 +275,20 @@ int main (int argc, char *argv[])
   uint64_t delay = 10;
   std::string bottleneck_bw = "10Gbps";
   uint64_t bottleneck_delay = 10;
-
+  if(transport_port == "TcpDctcp"){
+    delay = 80;
+    bottleneck_delay = 80;
+  }
   uint32_t IP_PACKET_SIZE = 1500;
   uint32_t TCP_SEGMENT = IP_PACKET_SIZE-40;
   uint32_t flow_size = 128;//KB
   double data_mbytes;
 
-  double minRto = 200;
+  double minRto = 25;
   uint32_t initialCwnd = 2;
 
-  double start_time = 1;
-  double stop_time = 2.5;
+  double start_time = 0.7;
+  double stop_time = 1.2;
 
   bool tracing = true;
 
@@ -355,7 +359,7 @@ int main (int argc, char *argv[])
 	  queue_disc_type = "FifoQueueDisc";
 	  Config::SetDefault("ns3::FifoQueueDisc::MaxSize", QueueSizeValue (QueueSize (queue_limit)));
   }
-  data_mbytes = (sendNum-2)*flow_size*1024;
+  data_mbytes = (sendNum-6)*flow_size*1024;
   /******** Create Nodes ********/
   NodeContainer switches;
   switches.Create(2);//哑铃结构
@@ -437,7 +441,7 @@ int main (int argc, char *argv[])
     openFlowDev1 = of13Helper->InstallSwitch (switches.Get(0), switch1Ports);
     openFlowDev2 = of13Helper->InstallSwitch (switches.Get(1), switch2Ports);
     of13Helper->CreateOpenFlowChannels ();
-    OFSwitch13Helper::EnableDatapathLogs ();
+    // OFSwitch13Helper::EnableDatapathLogs ();
   }else {//不采用OpenFlow，可以是TCPCubic或DCTCP等
     /******** Install Internet Stack ********/
     InternetStackHelper stack;
@@ -527,17 +531,17 @@ int main (int argc, char *argv[])
   if (tracing)
   {
     std::string dirToSave = "mkdir -p " + dir;
-	  system (dirToSave.c_str ());
+    system (dirToSave.c_str ());
     std::string pcapDirToSave = "mkdir -p " + pcap_dir;
-	  system (pcapDirToSave.c_str ());
+    system (pcapDirToSave.c_str ());
 
-	  Simulator::Schedule (Seconds (start_time + 0.000001), &TraceRtt, dir+"/rtt.data");
+	Simulator::Schedule (Seconds (start_time + 0.000001), &TraceRtt, dir+"/rtt.data");
     Simulator::Schedule (Seconds (start_time + 0.000001), &TraceCwnd, dir+"/cwnd.data");
     Simulator::Schedule (Seconds (start_time + 0.000001), &TraceRwnd, dir+"/rwnd.data");
     // of13Helper->EnableOpenFlowPcap ("openflow");
     // of13Helper->EnableDatapathStats ("switch-stats");
     // Get queue size
-	  filePlotQueue <<  dir << "/" << "queue-size.plotme";
+    filePlotQueue <<  dir << "/" << "queue-size.plotme";
     if(is_sdn == true){
       // csmaHelper.EnablePcap (pcap_dir+"/switch", switch1Ports, true);
       // csmaHelper.EnablePcap (pcap_dir+"/switch", switch2Ports, true);
@@ -552,7 +556,7 @@ int main (int argc, char *argv[])
     }
     // csmaHelper.EnablePcap (pcap_dir+"/mouReceive", mouReceDevices);
     // csmaHelper.EnablePcap (pcap_dir+"/eleReceive", eleReceDevices);
-    csmaHelper.EnablePcap (pcap_dir+"/csmaHost", hostDevices);
+    // csmaHelper.EnablePcap (pcap_dir+"/csmaHost", hostDevices);
     // Get throughput1
     filePlotThroughput1  <<  dir << "/"  << "throughput1.dat";
     remove (filePlotThroughput1.str ().c_str());
@@ -571,8 +575,38 @@ int main (int argc, char *argv[])
     Simulator::Schedule(initialSketchDelay, &QuerySketch, openFlowDev1);
   }
 
+  // Install FlowMonitor on all nodes
+  FlowMonitorHelper flowmon;
+  Ptr<FlowMonitor> monitor = flowmon.InstallAll ();
+
+  //AnimationInterface anim("dctcpVScubic.xml");
   Simulator::Stop (Seconds(stop_time));
   Simulator::Run ();
+
+  // Get information from FlowMonitor
+  monitor->CheckForLostPackets ();
+  Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (flowmon.GetClassifier ());
+  FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats ();
+  filePlotfct << dir << "/" << "FCT.dat";
+  remove (filePlotfct.str ().c_str());
+  std::ofstream fPlotFCT (filePlotfct.str ().c_str(), std::ios::out | std::ios::app);
+  for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i)
+  {
+    // Ipv4FlowClassifier::FiveTuple FiveTuple = classifier->FindFlow (i->first);
+    // fPlotFCT  << "Flow " << i->first << " (" << FiveTuple.sourceAddress << " -> " << FiveTuple.destinationAddress << ")\n";
+    // fPlotFCT  << "  Statr time: " << i->second.timeFirstTxPacket << "\n";
+    // fPlotFCT  << "  Tx Packets: " << i->second.txPackets << "\n";
+    // fPlotFCT  << "  Tx Bytes:   " << i->second.txBytes << "\n";
+    // fPlotFCT  << "  TxOffered:  " << i->second.txBytes * 8.0 / 1000000 / (i->second.timeLastRxPacket-i->second.timeFirstTxPacket).GetSeconds() << " Mbps\n";
+    // fPlotFCT  << "  Rx Packets: " << i->second.rxPackets << "\n";
+    // fPlotFCT  << "  Rx Bytes:   " << i->second.rxBytes << "\n";
+    // fPlotFCT  << "  Throughput: " << i->second.rxBytes * 8.0 / 1000000/ (i->second.timeLastRxPacket-i->second.timeFirstTxPacket).GetSeconds() << " Mbps\n";
+    fPlotFCT  << (i->second.timeLastRxPacket-i->second.timeFirstTxPacket).GetMilliSeconds() << "\n";
+  }
+
+  // Collect data
+  NS_LOG_INFO ("Collect data.");
+
   Simulator::Destroy ();
 
   /***** Measure the actual time the simulation has taken (for reference) *****/

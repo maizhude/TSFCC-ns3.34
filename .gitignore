@@ -50,6 +50,8 @@ cmake-build-minsizerel/
 cmake-build-release/
 vcpkg/
 incast/
+single-tree/
+singletree/
 pcap/
 yaling*
 .vs/
